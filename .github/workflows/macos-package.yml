@@ -1,0 +1,48 @@
+name: macOS Package
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, "cursor/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: macos-package
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+      - name: Build unsigned macOS app / dmg
+        # Unsigned / ad-hoc is intentional for the first Mac MVP artifact.
+        # Notarization secrets (APPLE_CERTIFICATE, APPLE_ID, APPLE_TEAM_ID, etc.)
+        # are not required for a green package job.
+        env:
+          # Keep CI from attempting Apple notarization when secrets are absent.
+          TAURI_SIGNING_PRIVATE_KEY: ""
+        run: |
+          pnpm tauri build --bundles app,dmg
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fly-island-macos
+          path: |
+            src-tauri/target/release/bundle/macos/*.app
+            src-tauri/target/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+          retention-days: 14
