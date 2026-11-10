@@ -22,9 +22,12 @@ pub(super) fn parse_hex_color(value: &str) -> Option<(u8, u8, u8)> {
 
 #[cfg(windows)]
 pub(super) fn clear_window_glass_region(window: &WebviewWindow) -> Result<(), String> {
+    use windows::Win32::Foundation::HWND;
     use windows::Win32::Graphics::Gdi::SetWindowRgn;
 
     let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+    // Tauri may resolve HWND via a different `windows` crate version than ours.
+    let hwnd = HWND(hwnd.0);
     if unsafe { SetWindowRgn(hwnd, None, true) } == 0 {
         return Err("Failed to clear the liquid glass window region.".to_string());
     }

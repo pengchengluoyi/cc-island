@@ -31,7 +31,8 @@ pub(super) fn cursor_is_inside_island(window: &WebviewWindow) -> bool {
     };
 
     let hwnd = match window.hwnd() {
-        Ok(hwnd) => hwnd,
+        // Tauri may resolve HWND via a different `windows` crate version than ours.
+        Ok(hwnd) => windows::Win32::Foundation::HWND(hwnd.0),
         Err(_) => return true,
     };
     let mut window_rect = RECT::default();
